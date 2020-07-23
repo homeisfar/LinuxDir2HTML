@@ -6,8 +6,9 @@ import os
 import sys
 import datetime
 from os.path import getsize
+import argparse
 
-# global variables definition
+# Mostly variables from template.html
 appName = "LinuxDir2HTML"
 appVer = "1.2"
 genDate = datetime.datetime.now().strftime("%m/%d/%Y")
@@ -18,9 +19,20 @@ dirData = ""
 numFiles=0 
 numDirs=0 
 grandTotalSize=0
-linkFiles="false" # file linking not yet implemented
+linkFiles="false"
+linkProtocol = "file://"
+linkRoot = "/"
+show_hidden = True # Not implemented
 
-# functions definition
+parser = argparse.ArgumentParser(description='Generate HTML view of file system.\n')
+parser.add_argument('pathToIndex')
+parser.add_argument('outputfile')
+#parser.add_argument('--nohidden',
+#                    help='Do not traverse hidden directories or count hidden files',
+#                    action="store_true")
+parser.add_argument('--withlinks', help='Create links to files in HTML output',
+                    action="store_true")
+
 def generateDirArray(dirToScan):
     global dirData
     global numFiles
@@ -46,6 +58,7 @@ def generateDirArray(dirToScan):
 
     # Traverse the directory tree
     for currentDir, dirs, files in os.walk(dirToScan):
+        path1, file1 = os.path.split(currentDir)
         dirs = sorted(dirs, key=str.casefold)
         files = sorted(files, key=str.casefold)
         currentDirId=dirIDsDictionary[currentDir]
@@ -97,7 +110,7 @@ def generateDirArray(dirToScan):
             if type(allDirArray[d][g]) == int:
                 dirData += f"{allDirArray[d][g]},"
             else:
-                dirData += f'"{allDirArray[d][g]}",' # Technically the trailing , is an error but the js is forgiving
+                dirData += f'"{allDirArray[d][g]}",' # The trailing , is an error but the js is forgiving
         dirData += "])\n"
         dir_results.append(dirData)
     return
@@ -122,23 +135,28 @@ def generateHTML(dirData,appName,appVer,genDate,genTime,title,appLink,numFiles,n
         modifiedLine = modifiedLine.replace('[NUM DIRS]', str(numDirs))
         modifiedLine = modifiedLine.replace('[TOT SIZE]', str(grandTotalSize))
         modifiedLine = modifiedLine.replace('[LINK FILES]', linkFiles)
+        modifiedLine = modifiedLine.replace('[LINK PROTOCOL]', linkProtocol)
+        modifiedLine = modifiedLine.replace('[SOURCE ROOT]', '')
+        modifiedLine = modifiedLine.replace('[LINK ROOT]', '')
         outputFile.write(modifiedLine)
     templateFile.close()
     outputFile.close()
     print("Wrote output to: " + os.path.realpath(outputFile.name))
 
 # main program start point
-if len(sys.argv) < 3:
-    print("Missing arguments. This tool should be used as follows:")
-    print("     LinuxDir2HTML pathToIndex outputFileName")
-else:
-    pathToIndex = str(sys.argv[1])
-    title = str(sys.argv[2])
-    if os.path.exists(pathToIndex):
-        pathToIndex = os.path.abspath(pathToIndex)
-        print("Indexing directories...")
-        generateDirArray(pathToIndex)
-        print("Outputting HTML...")
-        generateHTML(dirData,appName,appVer,genDate,genTime,title,appLink,numFiles,numDirs,grandTotalSize,linkFiles)
-    else:
-        print("The specified directory doesn't exist. Aborting.")
+args = parser.parse_args()
+pathToIndex = args.pathToIndex
+title = args.outputfile
+if args.withlinks:
+    linkFiles = "true"
+#if args.nohidden:
+#    show_hidden = False
+if not os.path.exists(pathToIndex):
+    print("The specified directory doesn't exist. Aborting.")
+    exit(1)
+
+pathToIndex = os.path.abspath(pathToIndex)
+print("Indexing directories...")
+generateDirArray(pathToIndex)
+print("Outputting HTML...")
+generateHTML(dirData,appName,appVer,genDate,genTime,title,appLink,numFiles,numDirs,grandTotalSize,linkFiles)
