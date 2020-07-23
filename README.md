@@ -21,7 +21,7 @@ Note this requires Python3.6 or greater, but if you modify the python to remove 
 ## License
 The LinuxDir2HTML.py file is licensed under GPLv2.
 
-The template.html file is taken directly from Snap2HTML and is licensed as freeware.
+The template.html file Copyright (C) by Dan and is licensed as GPLv3.
 
 ## Issues (Wishlist)
 The original Python code was not well-implemented. I've made essentially the minimum efforts needed to improve upon it, but have plans to continue making improvements, but no timeline to do so.
