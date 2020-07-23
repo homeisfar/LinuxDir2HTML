@@ -9,7 +9,7 @@ from os.path import getsize
 
 # global variables definition
 appName = "LinuxDir2HTML"
-appVer = "1.1"
+appVer = "1.2"
 genDate = datetime.datetime.now().strftime("%m/%d/%Y")
 genTime = datetime.datetime.now().strftime("%H:%M")
 appLink = "https://github.com/homeisfar/LinuxDir2HTML"
@@ -51,9 +51,8 @@ def generateDirArray(dirToScan):
         currentDirId=dirIDsDictionary[currentDir]
         currentDirArray=[]
         currentDirModifiedTime = datetime.datetime.fromtimestamp(os.path.getmtime(currentDir))
-        currentDirModifiedTime = currentDirModifiedTime.strftime("%m/%d/%Y %H:%M:%S")
-        currentDirFixed = currentDir.replace("/","\\\\")  # Replace / with \\ in the dir path (necessary for JavaScript functions to work properly)
-        currentDirArray.append(currentDirFixed+'*0*'+currentDirModifiedTime)
+        currentDirModifiedTime = int(currentDirModifiedTime.timestamp())
+        currentDirArray.append(f'{currentDir}*0*{currentDirModifiedTime}')
         totalSize = 0
         for file in files:
             full_file_path = os.path.join(currentDir, file)
@@ -64,7 +63,7 @@ def generateDirArray(dirToScan):
                 totalSize = totalSize + fileSize
                 grandTotalSize = grandTotalSize + fileSize
                 fileModifiedTime = datetime.datetime.fromtimestamp(os.path.getmtime(full_file_path))
-                fileModifiedTime = fileModifiedTime.strftime("%m/%d/%Y %H:%M:%S")
+                fileModifiedTime = int(fileModifiedTime.timestamp())
                 currentDirArray.append(f'{file}*{fileSize}*{fileModifiedTime}')
         currentDirArray.append(totalSize)
         # Create the list of directory IDs correspondent to the subdirs present on the current directory
@@ -93,13 +92,13 @@ def generateDirArray(dirToScan):
     #   ];
 
     for d in range(len(allDirArray)):
-        dirData = f"dirs[{d}] = [\n"
+        dirData = f"D.p(["
         for g in range(len(allDirArray[d])):
             if type(allDirArray[d][g]) == int:
-                dirData += f"{allDirArray[d][g]},\n"
+                dirData += f"{allDirArray[d][g]},"
             else:
-                dirData += f'"{allDirArray[d][g]}",\n'
-        dirData += "];\n\n"
+                dirData += f'"{allDirArray[d][g]}",' # Technically the trailing , is an error but the js is forgiving
+        dirData += "])\n"
         dir_results.append(dirData)
     return
 
