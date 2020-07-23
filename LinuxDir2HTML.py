@@ -65,7 +65,7 @@ def generateDirArray(dirToScan):
                 grandTotalSize = grandTotalSize + fileSize
                 fileModifiedTime = datetime.datetime.fromtimestamp(os.path.getmtime(full_file_path))
                 fileModifiedTime = fileModifiedTime.strftime("%m/%d/%Y %H:%M:%S")
-                currentDirArray.append(f'{file}*{fileSize}*fileModifiedTime')
+                currentDirArray.append(f'{file}*{fileSize}*{fileModifiedTime}')
         currentDirArray.append(totalSize)
         # Create the list of directory IDs correspondent to the subdirs present on the current directory
         # This acts as a list of links to the subdirectories on the JavaScript code

@@ -32,4 +32,6 @@ File links in the HTML are not implemented, and might never be.
 
 I'd also like to include an option to ignore hidden files.
 
+There are no plans to implement a GUI.
+
 As an American, I prefer MM/DD/YYYY. Sorry!
