@@ -56,7 +56,7 @@ def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
         # [1] leads with the current directory path and modification time, and 
         # is followed by the directory's files and their attibutes.
         # Id is unused but could be useful for future features.
-        dirs_dictionary[currentDir] = [0, [], 0, '']
+        dirs_dictionary[currentDir] = [i, [], 0, '']
         arr = dirs_dictionary[currentDir][1]
         dir_mod_time = int(datetime.datetime.fromtimestamp(os.path.getmtime(currentDir)).timestamp())
         arr.append(f'{currentDir}*0*{dir_mod_time}')
