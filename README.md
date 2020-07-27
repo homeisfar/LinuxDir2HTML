@@ -1,6 +1,6 @@
 # LinuxDir2HTML
 
-LinuxDir2HTML is a CLI-only clone of [Snap2HTML](https://www.rlvision.com/snap2html/). It is directly based on [DiogenesList](https://github.com/ZapperDJ/DiogenesList), making significant improvements to it.
+LinuxDir2HTML is a small program to help create an offline manifest of your files in an easily navigable html format. It is a CLI-only clone of [Snap2HTML](https://www.rlvision.com/snap2html/). LinuxDir2HTML is based on [DiogenesList](https://github.com/ZapperDJ/DiogenesList), but makes significant improvements to it.
 
 - Python 3.6+
 - Doesn't fail on symlinks (symlinks are ignored)
@@ -13,13 +13,13 @@ This program will produce essentially an identical output to Snap2HTML - using t
 ## Usage
 The program takes two mandatory arguments, the directory to be indexed and the output file name without the extension. So:
 
-    python diogeneslist.py ~/Pictures output
+    python LinuxDir2HTML.py ~/Pictures output
  
-will index the contents of /home/Pictures and save them to the present working directory in an easy-to-use html file.
+will index the contents of /home/Pictures and save the index as output.HTML in the present working directory.
 
-The two optional flags are `--hidden` to include hidden files and directories, and `--links` to make the HTML link to the files.
+There are two optional flags. `--hidden` to include hidden files and directories, and `--links` to make the HTML link to the files.
 
-Note LinuxDir2HTML requires Python 3.6 or greater, but if you modify the Python to remove string interpolation and the barely used pathlib, the minimum version will be lower.
+Note LinuxDir2HTML requires Python 3.6 or greater, but if you modify the Python to remove string interpolation and the barely used pathlib, the minimum version will be much lower.
 
 ## License
 The LinuxDir2HTML.py file is licensed under GPLv2.
@@ -40,4 +40,4 @@ Nice. I did everything I set out to do. These are all fixed/improved:
 
 [X] There are no plans to implement a GUI.
 
-[X] ~~As an American, I prefer MM/DD/YYYY. Sorry!~~ The up-to-date template uses epoch time.
+[X] The up-to-date template uses epoch time and converts to your locale. If you'd like to change this behavior, update the JS function `timestampToDate` in the template.
