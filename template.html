@@ -1205,14 +1205,14 @@
 				PreviousSearchFor = "";
 			
 				var path = 	getPathToDir(FolderID);
-				var currentViewPath = getDirNameAndPath(FolderID).replace(/\//g,"\\");
+				var currentViewPath = getDirNameAndPath(FolderID);
 				var breadcrumbs = "";
 				for( c=0; c<path.length; c++ )
 				{
 					var dirName = getDirName(path[c]);
-					if(c===0) {
-						dirName = dirName.replace(/\:\//g,"");	// remove :\ from volume labels
-					}
+					// if(c===0) {
+						// dirName = dirName.replace(/\:\//g,"");	// remove :\ from volume labels
+					// }
 					breadcrumbs += "<a href=\"#\" class=\"folder_link\" id=\"" + path[c] + "\">" + dirName + "</a>" + "<span class='path_divider'></span>";
 				}
 
@@ -1418,7 +1418,7 @@
 				for(var i=0; i<currentView.length; i++) {
 					
 					var path = "";
-					if(fullPath) path = currentView[i].path + "\\";
+					if(fullPath) path = currentView[i].path + "/";
 
 					var json_line = { "name": (path + currentView[i].name) }
 					if(colPath) json_line.path = currentView[i].path;
