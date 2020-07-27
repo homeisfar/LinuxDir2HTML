@@ -10,10 +10,23 @@ LinuxDir2HTML is a small program to help create an offline manifest of your file
 
 This program will produce essentially an identical output to Snap2HTML - using the same template from that project.
 
+## Installation
+### Python PIP
+Linux
+
+    python -m pip install --user linuxdir2html
+
+macOS
+
+    python3 -m pip install --user linuxdir2html
+### Basic
+Just download this repository and run the Python file directly.
+
+
 ## Usage
 The program takes two mandatory arguments, the directory to be indexed and the output file name without the extension. So:
 
-    python LinuxDir2HTML.py ~/Pictures output
+    linuxdir2html ~/Pictures output
  
 will index the contents of /home/Pictures and save the index as output.HTML in the present working directory.
 

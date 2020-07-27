@@ -9,7 +9,7 @@ from pathlib import Path
 
 # Mostly variables to feed into template.html
 appName     = "LinuxDir2HTML"
-app_ver     = "1.2"
+app_ver     = "1.3.0"
 gen_date    = datetime.datetime.now().strftime("%m/%d/%Y")
 gen_time    = datetime.datetime.now().strftime("%H:%M")
 app_link    = "https://github.com/homeisfar/LinuxDir2HTML"
@@ -31,18 +31,36 @@ parser.add_argument('--hidden',
                     action="store_true")
 parser.add_argument('--links', help='Create links to files in HTML output',
                     action="store_true")
+parser.add_argument('--version', help='Print version and exit', action="version", version=app_ver)
+
+def main():
+    global include_hidden, file_links
+    args = parser.parse_args()
+    pathToIndex = args.pathToIndex
+    title = args.outputfile
+    if args.links:
+        file_links = "true"
+    if args.hidden:
+        include_hidden = True
+    if not os.path.exists(pathToIndex):
+        print("The specified directory doesn't exist. Aborting.")
+        exit(1)
+
+    pathToIndex = Path(pathToIndex).resolve()
+    print("Indexing directories...")
+    generateDirArray(pathToIndex)
+    print("Outputting HTML...")
+    generateHTML(
+        dir_data,appName,app_ver,gen_date,gen_time,title,app_link,
+        total_numFiles,total_numDirs,grand_total_size,file_links)
 
 def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
-    global dir_data
-    global total_numFiles
-    global total_numDirs
-    global grand_total_size
-    global dir_results
+    global dir_data, total_numFiles, total_numDirs, grand_total_size, dir_results
     i = 0
     dirs_dictionary = {}
     
     # We enumerate every unique directory, ignoring symlinks.
-    for currentDir, dirs, files in os.walk(root_dir):
+    for current_dir, dirs, files in os.walk(root_dir):
         if include_hidden is False:
             dirs[:] = [d for d in dirs if not d[0] == '.']
             files = [f for f in files if not f[0] == '.']
@@ -56,15 +74,15 @@ def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
         # [1] leads with the current directory path and modification time, and 
         # is followed by the directory's files and their attibutes.
         # Id is unused but could be useful for future features.
-        dirs_dictionary[currentDir] = [i, [], 0, '']
-        arr = dirs_dictionary[currentDir][1]
-        dir_mod_time = int(datetime.datetime.fromtimestamp(os.path.getmtime(currentDir)).timestamp())
-        arr.append(f'{currentDir}*0*{dir_mod_time}')
+        dirs_dictionary[current_dir] = [i, [], 0, '']
+        arr = dirs_dictionary[current_dir][1]
+        dir_mod_time = int(datetime.datetime.fromtimestamp(os.path.getmtime(current_dir)).timestamp())
+        arr.append(f'{current_dir}*0*{dir_mod_time}')
 
         ##### FILES #####
         total_size = 0
         for file in files:
-            full_file_path = os.path.join(currentDir, file)
+            full_file_path = os.path.join(current_dir, file)
             if os.path.isfile(full_file_path):
                 total_numFiles  += 1
                 file_size        = os.path.getsize(full_file_path)
@@ -73,18 +91,18 @@ def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
                 mod_time    = datetime.datetime.fromtimestamp(os.path.getmtime(full_file_path))
                 mod_time    = int(mod_time.timestamp())
                 arr.append(f'{file}*{file_size}*{mod_time}')
-        dirs_dictionary[currentDir][2] = total_size
+        dirs_dictionary[current_dir][2] = total_size
 
         ##### DIRS #####
         dir_links = ''
         for dir in dirs:
-            full_dir_path = os.path.join(currentDir, dir)
+            full_dir_path = os.path.join(current_dir, dir)
             if os.path.isdir(full_dir_path) and not os.path.islink(full_dir_path):
                 i += 1
                 total_numDirs += 1
                 dirs_dictionary[full_dir_path] = (i, [], '')
                 dir_links += f'{i}*'
-        dirs_dictionary[currentDir][3] = dir_links[:-1]
+        dirs_dictionary[current_dir][3] = dir_links[:-1]
 
     ## OUTPUT
     # Format
@@ -102,12 +120,12 @@ def generateHTML(
     gen_date, gen_time, title,
     app_link, numFiles, numDirs,
     grand_total_size, file_links):
-    templateFile = open(os.path.join(os.sys.path[0], 'template.html'), 'r')
+    templateFile = open((Path(__file__).parent / 'template.html'), 'r')
     outputFile = open(f'{title}.html', 'w')
     for line in templateFile:
         modifiedLine = line
         if '[DIR DATA]' in modifiedLine:
-            # I've seen one file from Steam with a crazy name...
+            # I've seen one file from Steam with a new line in its name...
             for line in dir_results:
                 sane_format = line.replace('\r', '')
                 outputFile.write(f'{sane_format}')
@@ -130,22 +148,5 @@ def generateHTML(
     outputFile.close()
     print("Wrote output to: " + os.path.realpath(outputFile.name))
 
-# main program start point
-args = parser.parse_args()
-pathToIndex = args.pathToIndex
-title = args.outputfile
-if args.links:
-    file_links = "true"
-if args.hidden:
-   include_hidden = True
-if not os.path.exists(pathToIndex):
-    print("The specified directory doesn't exist. Aborting.")
-    exit(1)
-
-pathToIndex = Path(pathToIndex).resolve()
-print("Indexing directories...")
-generateDirArray(pathToIndex)
-print("Outputting HTML...")
-generateHTML(
-    dir_data,appName,app_ver,gen_date,gen_time,title,app_link,
-    total_numFiles,total_numDirs,grand_total_size,file_links)
+if __name__ == '__main__':
+    main()
