@@ -20,17 +20,22 @@ macOS
 
     python3 -m pip install --user linuxdir2html
 ### Basic
-Just download this repository and run the Python file directly.
-
+Just download this repository and run the linuxdir2html.py file directly.
 
 ## Usage
 The program takes two mandatory arguments, the directory to be indexed and the output file name without the extension. So:
 
     linuxdir2html ~/Pictures output
  
-will index the contents of /home/Pictures and save the index as output.HTML in the present working directory.
+will index the contents of /home/Pictures and save the index as output.html in the present working directory.
 
 There are two optional flags. `--hidden` to include hidden files and directories, and `--links` to make the HTML link to the files.
+
+Newly introduced in v1.4.0 is a stacking `--startswith` parameter. For example,
+
+    linuxdir2html --startswith 'dev' --startswith 'l' ~ ~/output
+
+will select directories that start with 'd' and the directory named Example from the ~ directory. This processing only affects the root search directory. The result will be saved as output.html in ~. The hidden flag is usable with the startswith flag.
 
 Note LinuxDir2HTML requires Python 3.6 or greater, but if you modify the Python to remove string interpolation and the barely used pathlib, the minimum version will be much lower.
 
