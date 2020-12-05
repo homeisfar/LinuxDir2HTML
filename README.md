@@ -1,6 +1,6 @@
 # LinuxDir2HTML
 
-LinuxDir2HTML is a small program to help create an offline manifest of your files in an easily navigable html format. It is a CLI-only clone of [Snap2HTML](https://www.rlvision.com/snap2html/). LinuxDir2HTML is based on [DiogenesList](https://github.com/ZapperDJ/DiogenesList), but makes significant improvements to it.
+LinuxDir2HTML is a small program to help create an offline manifest of your files in an easily navigable html format. It is a CLI-only clone of [Snap2HTML](https://www.rlvision.com/snap2html/). LinuxDir2HTML is a rewrite of [DiogenesList](https://github.com/ZapperDJ/DiogenesList), making significant improvements to it:
 
 - Python 3.6+
 - Doesn't fail on symlinks (symlinks are ignored)
@@ -8,7 +8,7 @@ LinuxDir2HTML is a small program to help create an offline manifest of your file
 - Much, much, much faster
 - Highly improved code
 
-This program will produce essentially an identical output to Snap2HTML - using the same template from that project.
+LinuxDir2HTML will produce essentially an identical output to Snap2HTML by using the same HTML template from that project.
 
 ## Installation
 ### Python PIP
@@ -20,7 +20,7 @@ macOS
 
     python3 -m pip install --user linuxdir2html
 ### Basic
-Just download this repository and run the linuxdir2html.py file directly.
+There are no external dependencies, so the file linuxdir2html.py could be downloaded and run directly.
 
 ## Usage
 The program takes two mandatory arguments, the directory to be indexed and the output file name without the extension. So:
@@ -29,13 +29,13 @@ The program takes two mandatory arguments, the directory to be indexed and the o
  
 will index the contents of /home/Pictures and save the index as output.html in the present working directory.
 
-There are two optional flags. `--hidden` to include hidden files and directories, and `--links` to make the HTML link to the files.
+There are two optional flags. `--hidden` to include hidden files and directories, and `--links` to make the HTML link to the files directly.
 
-Newly introduced in v1.4.0 is a stacking `--startswith` parameter. For example,
+By user request, newly introduced in v1.4.0 are a stacking `--startswith`and `--child` parameters. For example,
 
-    linuxdir2html --startswith 'dev' --startswith 'l' ~ ~/output
+    linuxdir2html --startswith 'dev' --child 'Pictures' ~ ~/output
 
-will select directories that start with 'd' and the directory named Example from the ~ directory. This processing only affects the root search directory. The result will be saved as output.html in ~. The hidden flag is usable with the startswith flag.
+will select directories that start with 'dev' and the directory named 'Pictures' from the the user's home directory. The `--startswith` filter only affects the root search directory, all subdirectories and files will be indexed. The hidden flag is usable with the startswith flag.
 
 Note LinuxDir2HTML requires Python 3.6 or greater, but if you modify the Python to remove string interpolation and the barely used pathlib, the minimum version will be much lower.
 
