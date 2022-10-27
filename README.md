@@ -19,6 +19,8 @@ Linux
 macOS
 
     python3 -m pip install --user linuxdir2html
+
+Add the --upgrade flag to install or upgrade.
 ### Basic Install
 There are no external dependencies. If you do not wish to use pip, download `linuxdir2html.py` and `template.html`. Run the python directly.
 
