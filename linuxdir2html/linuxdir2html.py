@@ -1,11 +1,15 @@
 # Licensed GPLv2
 # Copyright (C) ZapperDJ    2017 https://github.com/ZapperDJ/DiogenesList
-# Copyright (C) Ali Homafar 2020 https://github.com/homeisfar/LinuxDir2HTML
+# Copyright (C) Ali Homafar 2020,2022 https://github.com/homeisfar/LinuxDir2HTML
 # Contributions Bruce Riddle 2020
 
 # Changelog
-# v1.3.0 - Initial release
-# v1.4.0 - Safety, logging, and --startswith and --child parameters.
+# v1.3.0             - Initial release
+# v1.4.0 (Aug. 2020) - Safety, logging, and --startswith and --child parameters.
+# v1.5.0 (Oct. 2022) - Write errors fix (thanks Jarvis-3-0). Handle " in filenames.
+
+# Note that certain characters in file names will cause issues.
+# Especially '\n', and to much lesser extent '*'
 
 import argparse
 import datetime
@@ -16,7 +20,7 @@ import re
 
 # Mostly variables to feed into template.html
 appName     = "LinuxDir2HTML"
-app_ver     = "1.4.0"
+app_ver     = "1.5.0"
 gen_date    = datetime.datetime.now().strftime("%m/%d/%Y")
 gen_time    = datetime.datetime.now().strftime("%H:%M")
 app_link    = "https://github.com/homeisfar/LinuxDir2HTML"
@@ -173,6 +177,7 @@ def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
         dir_data = f'D.p(['
         try:
             for data in dirs_dictionary[entry][1]:
+                data = data.replace('"', '&quot;') # Quotes in files/dirs can break the html result.
                 dir_data += f'"{data}",'
             dir_data += f'{dirs_dictionary[entry][2]},"{dirs_dictionary[entry][3]}"])\n'
             dir_results.append(dir_data)
@@ -209,7 +214,7 @@ def generateHTML(
     app_link, numFiles, numDirs, grand_total_size, file_links
     ):
     template_file = open((Path(__file__).parent / 'template.html'), 'r')
-    output_file = open(f'{title}.html', 'w', encoding="utf-8")
+    output_file = open(f'{title}.html', 'w', encoding="utf-8", errors='xmlcharrefreplace')
     for line in template_file:
         modified_line = line
         if '[DIR DATA]' in modified_line:
