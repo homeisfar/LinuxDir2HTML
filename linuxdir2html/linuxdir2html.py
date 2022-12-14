@@ -5,8 +5,9 @@
 
 # Changelog
 # v1.3.0             - Initial release
-# v1.4.0 (Aug. 2020) - Safety, logging, and --startswith and --child parameters.
+# v1.4.0 (Aug. 2020) - Safety, logging, and --startswith and --child options.
 # v1.5.0 (Oct. 2022) - Write errors fix (thanks Jarvis-3-0). Handle " in filenames.
+# v1.6.0 (Dec. 2022) - Introduce the --symlink and --silent options.
 
 # Note that certain characters in file names will cause issues.
 # Especially '\n', and to much lesser extent '*'
@@ -20,7 +21,7 @@ import re
 
 # Mostly variables to feed into template.html
 appName     = "LinuxDir2HTML"
-app_ver     = "1.5.0"
+app_ver     = "1.6.0"
 gen_date    = datetime.datetime.now().strftime("%m/%d/%Y")
 gen_time    = datetime.datetime.now().strftime("%H:%M")
 app_link    = "https://github.com/homeisfar/LinuxDir2HTML"
@@ -28,12 +29,13 @@ dir_data    = ""
 total_numFiles  = 0 
 total_numDirs   = 0 
 grand_total_size= 0
-file_links      = "false"
+file_links      = "false"   # This is a string b/c it's used in the template.
 link_protocol   = "file://"
 include_hidden  = False
+follow_symlink  = False
 dir_results     = []
-childList_names = [] # names supplied from --child parameters
-startsList_names = [] # dir's generated from --startsfrom parameters
+childList_names = [] # names supplied from --child options
+startsList_names = [] # dir's generated from --startsfrom options
 # linkRoot = "/"  # [LINK ROOT] is fixed as '' (see generateHTML)
 
 parser = argparse.ArgumentParser(description='Generate HTML view of the file system.\n')
@@ -43,11 +45,13 @@ parser.add_argument('--child', action='append', help='Exact name(s) of children 
 parser.add_argument('--startswith', action='append', help='Start of name(s) of children dirs to include')
 parser.add_argument('--hidden', help='Include hidden files (leading with .)', action="store_true")
 parser.add_argument('--links', help='Create links to files in HTML output', action="store_true")
+parser.add_argument('--symlink', help='Follow symlinks. WARN: This can cause infinite loops.', action="store_true")
 parser.add_argument('-v', '--verbose', help='increase output verbosity. -v or -vv for more.', action="count")
+parser.add_argument('--silent', help='Suppress terminal output except on error.', action="store_true")
 parser.add_argument('--version', help='Print version and exit', action="version", version=app_ver)
 
 def main():
-    global include_hidden, file_links, childList_names, startsList_names
+    global include_hidden, file_links, childList_names, startsList_names, follow_symlink
     args = parser.parse_args()
     
     ## Initialize logging facilities
@@ -57,6 +61,8 @@ def main():
             log_level = logging.DEBUG
         elif args.verbose == 1:
             log_level = logging.INFO
+    if args.silent:
+        log_level = logging.ERROR
     logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%H:%M:%S', level=log_level)
     log_name = logging.getLevelName(logging.getLogger().getEffectiveLevel())
     logging.info( f'Logging Level {log_name}')
@@ -68,6 +74,9 @@ def main():
         file_links = "true"
     if args.hidden:
         include_hidden = True
+    if args.symlink:
+        follow_symlink = True
+        logging.warning(f"Please be aware following symlinks can cause circular infinite loops.")
     if not os.path.exists(pathToIndex):
         logging.error(f"Directory specified to index [{pathToIndex}] doesn't exist. Aborting.")
         exit(1)
@@ -77,6 +86,7 @@ def main():
 
     logging.info(f"Creating file links is [{file_links}]")
     logging.info(f"Showing hidden items is [{include_hidden}]")
+    logging.info(f"Following symlinks is [{follow_symlink}]")
         
     # check that no child or startswith arg include a path separator
     for child_val in args.child or []:
@@ -108,9 +118,9 @@ def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
     id = 0
     dirs_dictionary = {}
     
-    # We enumerate every unique directory, ignoring symlinks.
+    # We enumerate every unique directory, ignoring symlinks by default.
     first_iteration = True
-    for current_dir, dirs, files in os.walk(root_dir):
+    for current_dir, dirs, files in os.walk(root_dir, True, None, follow_symlink):
         logging.debug( f'Walking Dir [{current_dir}]')
         
         # If --child or --startswith are used, only add the requested
@@ -154,7 +164,7 @@ def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
                     mod_time = int(datetime.datetime.fromtimestamp
                         (os.path.getmtime(full_file_path)).timestamp())
                 except:
-                    logging.warning(f'----fromtimestamp error [{full_file_path}]')
+                    logging.warning(f'----fromtimestamp timestamp invalid [{full_file_path}]')
                     mod_time = 1
                 arr.append(f'{file}*{file_size}*{mod_time}')
         dirs_dictionary[current_dir][2] = total_size
@@ -163,7 +173,8 @@ def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
         dir_links = ''
         for dir in dirs:
             full_dir_path = os.path.join(current_dir, dir)
-            if os.path.isdir(full_dir_path) and not os.path.islink(full_dir_path):
+            if (not follow_symlink and os.path.isdir(full_dir_path) and not os.path.islink(full_dir_path)) or \
+                    (follow_symlink and os.path.isdir(full_dir_path)):
                 id += 1
                 total_numDirs += 1
                 dirs_dictionary[full_dir_path] = (id, [], '')
