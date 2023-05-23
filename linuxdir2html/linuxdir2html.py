@@ -224,7 +224,7 @@ def generateHTML(
     dir_data, appName, app_ver, gen_date, gen_time, title,
     app_link, numFiles, numDirs, grand_total_size, file_links
     ):
-    template_file = open((Path(__file__).parent / 'template.html'), 'r')
+    template_file = open((Path(__file__).parent / 'template.html'), 'r', encoding="utf-8")
     output_file = open(f'{title}.html', 'w', encoding="utf-8", errors='xmlcharrefreplace')
     for line in template_file:
         modified_line = line
