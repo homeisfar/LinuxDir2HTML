@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import logging
 import re
+from tqdm import tqdm  # Import tqdm for progress bar
 
 # Mostly variables to feed into template.html
 appName     = "LinuxDir2HTML"
@@ -26,8 +27,8 @@ gen_date    = datetime.datetime.now().strftime("%m/%d/%Y")
 gen_time    = datetime.datetime.now().strftime("%H:%M")
 app_link    = "https://github.com/homeisfar/LinuxDir2HTML"
 dir_data    = ""
-total_numFiles  = 0 
-total_numDirs   = 0 
+total_numFiles  = 0
+total_numDirs   = 0
 grand_total_size= 0
 file_links      = "false"   # This is a string b/c it's used in the template.
 link_protocol   = "file://"
@@ -36,7 +37,6 @@ follow_symlink  = False
 dir_results     = []
 childList_names = [] # names supplied from --child options
 startsList_names = [] # dir's generated from --startsfrom options
-# linkRoot = "/"  # [LINK ROOT] is fixed as '' (see generateHTML)
 
 parser = argparse.ArgumentParser(description='Generate HTML view of the file system.\n')
 parser.add_argument('pathToIndex', help='Path of Directory to Index')
@@ -53,7 +53,7 @@ parser.add_argument('--version', help='Print version and exit', action="version"
 def main():
     global include_hidden, file_links, childList_names, startsList_names, follow_symlink
     args = parser.parse_args()
-    
+
     ## Initialize logging facilities
     log_level = logging.WARNING
     if args.verbose:
@@ -66,7 +66,7 @@ def main():
     logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%H:%M:%S', level=log_level)
     log_name = logging.getLevelName(logging.getLogger().getEffectiveLevel())
     logging.info( f'Logging Level {log_name}')
-    
+
     # Handle user input flags and options
     pathToIndex = args.pathToIndex
     title = args.outputfile
@@ -87,7 +87,7 @@ def main():
     logging.info(f"Creating file links is [{file_links}]")
     logging.info(f"Showing hidden items is [{include_hidden}]")
     logging.info(f"Following symlinks is [{follow_symlink}]")
-        
+
     # check that no child or startswith arg include a path separator
     for child_val in args.child or []:
         if os.sep in child_val:
@@ -111,75 +111,79 @@ def main():
         total_numFiles, total_numDirs, grand_total_size, file_links
         )
     return
-        
+
 def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
     global dir_data, total_numFiles, total_numDirs, grand_total_size, \
             dir_results, childList_names, startsList_names
     id = 0
     dirs_dictionary = {}
-    
+
     # We enumerate every unique directory, ignoring symlinks by default.
     first_iteration = True
-    for current_dir, dirs, files in os.walk(root_dir, True, None, follow_symlink):
-        logging.debug( f'Walking Dir [{current_dir}]')
-        
-        # If --child or --startswith are used, only add the requested
-        # directories. This will only be performed on the root_dir
-        if first_iteration:
-            first_iteration = False
-            if childList_names or startsList_names:
-                selectDirs(current_dir, dirs, include_hidden)
-                files = []
+    total_items = sum([len(files) + len(dirs) for _, dirs, files in os.walk(root_dir, follow_symlink)])
+    with tqdm(total=total_items, desc="Indexing") as pbar:
+        for current_dir, dirs, files in os.walk(root_dir, True, None, follow_symlink):
+            logging.debug( f'Walking Dir [{current_dir}]')
 
-        if include_hidden is False:
-            dirs[:] = [d for d in dirs if not d[0] == '.']
-            files = [f for f in files if not f[0] == '.']
+            # If --child or --startswith are used, only add the requested
+            # directories. This will only be performed on the root_dir
+            if first_iteration:
+                first_iteration = False
+                if childList_names or startsList_names:
+                    selectDirs(current_dir, dirs, include_hidden)
+                    files = []
 
-        dirs = sorted(dirs, key=str.casefold)
-        files = sorted(files, key=str.casefold)
+            if include_hidden is False:
+                dirs[:] = [d for d in dirs if not d[0] == '.']
+                files = [f for f in files if not f[0] == '.']
 
-        # The value list in the dictionary are indexed as follows.
-        # |  0 |      1     |         2           |    3     |
-        # | id | file_attrs | dir total file size | sub dirs |
-        # [1] leads with the current directory path and modification time, and 
-        # is followed by the directory's files and their attributes.
-        # Id is unused but could be useful for future features.
-        dirs_dictionary[current_dir] = [id, [], 0, '']
-        arr = dirs_dictionary[current_dir][1]
-        dir_mod_time = int(
-                datetime.datetime.fromtimestamp(
-                        os.path.getmtime(current_dir)).timestamp())
-        arr.append(f'{current_dir}*0*{dir_mod_time}')
+            dirs = sorted(dirs, key=str.casefold)
+            files = sorted(files, key=str.casefold)
 
-        ##### Enumerate FILES #####
-        total_size = 0
-        for file in files:
-            full_file_path = os.path.join(current_dir, file)
-            if os.path.isfile(full_file_path):
-                total_numFiles   += 1
-                file_size         = os.path.getsize(full_file_path)
-                total_size       += file_size
-                grand_total_size += file_size
-                try:  # Avoid possible invalid mtimes
-                    mod_time = int(datetime.datetime.fromtimestamp
-                        (os.path.getmtime(full_file_path)).timestamp())
-                except:
-                    logging.warning(f'----fromtimestamp timestamp invalid [{full_file_path}]')
-                    mod_time = 1
-                arr.append(f'{file}*{file_size}*{mod_time}')
-        dirs_dictionary[current_dir][2] = total_size
+            # The value list in the dictionary are indexed as follows.
+            # |  0 |      1     |         2           |    3     |
+            # | id | file_attrs | dir total file size | sub dirs |
+            # [1] leads with the current directory path and modification time, and
+            # is followed by the directory's files and their attributes.
+            # Id is unused but could be useful for future features.
+            dirs_dictionary[current_dir] = [id, [], 0, '']
+            arr = dirs_dictionary[current_dir][1]
+            dir_mod_time = int(
+                    datetime.datetime.fromtimestamp(
+                            os.path.getmtime(current_dir)).timestamp())
+            arr.append(f'{current_dir}*0*{dir_mod_time}')
 
-        ##### Enumerate DIRS #####
-        dir_links = ''
-        for dir in dirs:
-            full_dir_path = os.path.join(current_dir, dir)
-            if (not follow_symlink and os.path.isdir(full_dir_path) and not os.path.islink(full_dir_path)) or \
-                    (follow_symlink and os.path.isdir(full_dir_path)):
-                id += 1
-                total_numDirs += 1
-                dirs_dictionary[full_dir_path] = (id, [], '')
-                dir_links += f'{id}*'
-        dirs_dictionary[current_dir][3] = dir_links[:-1]
+            ##### Enumerate FILES #####
+            total_size = 0
+            for file in files:
+                full_file_path = os.path.join(current_dir, file)
+                if os.path.isfile(full_file_path):
+                    total_numFiles   += 1
+                    file_size         = os.path.getsize(full_file_path)
+                    total_size       += file_size
+                    grand_total_size += file_size
+                    try:  # Avoid possible invalid mtimes
+                        mod_time = int(datetime.datetime.fromtimestamp
+                            (os.path.getmtime(full_file_path)).timestamp())
+                    except:
+                        logging.warning(f'----fromtimestamp timestamp invalid [{full_file_path}]')
+                        mod_time = 1
+                    arr.append(f'{file}*{file_size}*{mod_time}')
+                pbar.update(1)
+            dirs_dictionary[current_dir][2] = total_size
+
+            ##### Enumerate DIRS #####
+            dir_links = ''
+            for dir in dirs:
+                full_dir_path = os.path.join(current_dir, dir)
+                if (not follow_symlink and os.path.isdir(full_dir_path) and not os.path.islink(full_dir_path)) or \
+                        (follow_symlink and os.path.isdir(full_dir_path)):
+                    id += 1
+                    total_numDirs += 1
+                    dirs_dictionary[full_dir_path] = (id, [], '')
+                    dir_links += f'{id}*'
+                pbar.update(1)
+            dirs_dictionary[current_dir][3] = dir_links[:-1]
 
     ## Output format follows:
     #  "FILE_PATH*0*MODIFIED_TIME","FILE_NAME*FILE_SIZE*MODIFIED_TIME",DIR_SIZE,"DIR1*DIR2..."
@@ -207,7 +211,7 @@ def selectDirs(current_dir, dirs, include_hidden):
         if include_hidden:
             hidden_dirs = ["."+d for d in startsList_names]
             logging.warning(f'Hidden flag set. Using dirs starting with [{str(hidden_dirs)[1:-1]}]')
-    
+
     desired_dirs = startsList_names + hidden_dirs
     for i in range(len(dirs) -1, -1, -1):
         keep_dir = '?'
