@@ -1,6 +1,9 @@
 # LinuxDir2HTML
+LinuxDir2HTML is a small program to help create an offline manifest of your files in an easily navigable html format.
 
-LinuxDir2HTML is a small program to help create an offline manifest of your files in an easily navigable html format. It is a CLI-only clone of [Snap2HTML](https://www.rlvision.com/snap2html/). LinuxDir2HTML is a rewrite of [DiogenesList](https://github.com/ZapperDJ/DiogenesList), making significant improvements to it:
+![](linuxdir2html.webp)
+
+It is a CLI-only clone of [Snap2HTML](https://www.rlvision.com/snap2html/). LinuxDir2HTML is a total rewrite of [DiogenesList](https://github.com/ZapperDJ/DiogenesList), making significant improvements to it:
 
 - Python 3.6+
 - Doesn't fail on symlinks (symlinks are optional)
@@ -9,9 +12,6 @@ LinuxDir2HTML is a small program to help create an offline manifest of your file
 - Highly improved code
 
 LinuxDir2HTML will produce essentially an identical output to Snap2HTML by using the same HTML template from that project.
-
-## Known Issue
-Currently any files with an astrisk character (\*) will interfere with the results and cause subtle errors in the output. Files with that character in the name are uncommon since they're invalid in Windows, but it's still an issue in Linux. The fix will involve rewriting the data format from a custom one to something more standard like JSON. See the following [issue](https://github.com/homeisfar/LinuxDir2HTML/issues/8) for more.
 
 ## Installation
 ### Python PIP Install
@@ -24,6 +24,7 @@ macOS
     python3 -m pip install --user --upgrade linuxdir2html
 
 Add the --upgrade flag to install or upgrade.
+
 ### Basic Install
 There are no external dependencies. If you do not wish to use pip, download `linuxdir2html.py` and `template.html` directly from this repo and run the python script directly.
 
@@ -35,7 +36,6 @@ The program takes two mandatory arguments, the directory to be indexed and the o
 will index the contents of `/home/username/Pictures` and save the index as `output.html` in the present working directory.
 
 ### Extra options
-
 There are five optional flags:
 
 `--hidden` to include hidden files and directories.  
@@ -46,7 +46,7 @@ There are five optional flags:
 
 You should only enable the symlink flag if you have a known need for it.
 
-By user request, newly introduced in v1.4.0 are a stacking `--startswith` and `--child` parameters. For example,
+By user request, newly introduced in v1.4.0 are a stacking `--startswith` and `--child` parameters [NOTE: As of v1.6.1 these are considered deprecated. They will be removed in the future.]. For example,
 
     linuxdir2html --startswith 'dev' --child 'Pictures' ~ ~/output
 
@@ -54,18 +54,17 @@ will select directories that start with 'dev' and the directory named 'Pictures'
 
 
 ## License
-The LinuxDir2HTML.py file is licensed under GPLv2.
+The LinuxDir2HTML.py file is licensed under GPLv3.
 
-The template.html file Copyright (C) by Dan and is licensed as GPLv3.
+The template.html file Copyright (C) by Dan and is licensed as GPLv3. I made some minor modifications to it for handling Linux.
 
 ## Notes
 - There are no plans to implement a GUI.
 - The up-to-date template uses epoch time and converts to your locale. If you'd like to change this behavior, update the JS function `timestampToDate` in the template.
-- Certain characters like `\n` I've chosen to not implement handling for. In my humble opinion, just don't use new lines in file names :) *Update 2023: This may be resolved when I do the JSON rewrite*
 - LinuxDir2HTML requires Python 3.6 or greater, but if you modify the code to remove string interpolation and the barely used pathlib, the minimum required version will be much lower.
 
-## Similar programs
-
+## Similar programs (Alternatives)
+### ncdu
 I have long used an excellent program called [ncdu](https://dev.yorhel.nl/ncdu/man) to perform a similar function to WinDirStat or Disk Inventory X. I recently learned it has an export feature which you may find useful. Consider using it!
 
 Export a directory and browse it once scanning is done:
@@ -75,3 +74,14 @@ Export a directory and browse it once scanning is done:
 Browse the contents of the file, without rescanning:
 
     ncdu -f ~/ncduscan.file
+
+### Tree
+You can also use `tree` by Steve Baker, et al. with its JSON output.
+```
+tree -s -D -J
+```
+
+## Roadmap
+
+- [ ] Dark appearance
+- [ ] Allow URLs to be hosted/retrievable through a web server with --links [low priority]

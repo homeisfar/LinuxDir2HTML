@@ -1,27 +1,32 @@
-# Licensed GPLv2
-# Copyright (C) ZapperDJ    2017 https://github.com/ZapperDJ/DiogenesList
-# Copyright (C) Ali Homafar 2020,2022 https://github.com/homeisfar/LinuxDir2HTML
+# Licensed GPL-3.0-only
+# Copyright (C) Ali Homafar 2020-2025 https://github.com/homeisfar/LinuxDir2HTML
 # Contributions Bruce Riddle 2020
 
-# Changelog
+# Short Changelog
 # v1.3.0             - Initial release
 # v1.4.0 (Aug. 2020) - Safety, logging, and --startswith and --child options.
 # v1.5.0 (Oct. 2022) - Write errors fix (thanks Jarvis-3-0). Handle " in filenames.
 # v1.6.0 (Dec. 2022) - Introduce the --symlink and --silent options.
+# v1.6.1 (Mar. 2025) - Fixed lingering issues w.r.t. certain file names breaking the output.
+#                    - Fixed issues with files or directories which do not have read rights.
+# v1.7.0 (Planned) - Remove the --startswith and --child flags. I've never liked these.
 
-# Note that certain characters in file names will cause issues.
-# Especially '\n', and to much lesser extent '*'
+# Prior to v1.6.1 symlinks filesizes were erroneously counted as the full files.
+# Now symlinked files are counted for however long the symlink itself is. If the symlink
+# points to a non-file then it probably will not be in the output (e.g. wine drive_c dir).
+# v1.6.1 finally fixes files with new lines and * breaking the output.
 
 import argparse
 import datetime
+import json
+import logging
 import os
 from pathlib import Path
-import logging
 import re
 
-# Mostly variables to feed into template.html
+# Most of the following variables are to replace placeholders in template.html
 appName     = "LinuxDir2HTML"
-app_ver     = "1.6.0"
+app_ver     = "1.6.1"
 gen_date    = datetime.datetime.now().strftime("%m/%d/%Y")
 gen_time    = datetime.datetime.now().strftime("%H:%M")
 app_link    = "https://github.com/homeisfar/LinuxDir2HTML"
@@ -29,7 +34,7 @@ dir_data    = ""
 total_numFiles  = 0 
 total_numDirs   = 0 
 grand_total_size= 0
-file_links      = "false"   # This is a string b/c it's used in the template.
+file_links      = "false"   # This is a string b/c it's used in the html template.
 link_protocol   = "file://"
 include_hidden  = False
 follow_symlink  = False
@@ -41,8 +46,8 @@ startsList_names = [] # dir's generated from --startsfrom options
 parser = argparse.ArgumentParser(description='Generate HTML view of the file system.\n')
 parser.add_argument('pathToIndex', help='Path of Directory to Index')
 parser.add_argument('outputfile', help='Name of report file (without .html)')
-parser.add_argument('--child', action='append', help='Exact name(s) of children directories to include')
-parser.add_argument('--startswith', action='append', help='Start of name(s) of children dirs to include')
+parser.add_argument('--child', action='append', help='[DEPRECATED] Exact name(s) of children directories to include')
+parser.add_argument('--startswith', action='append', help='[DEPRECATED] Start of name(s) of children dirs to include')
 parser.add_argument('--hidden', help='Include hidden files (leading with .)', action="store_true")
 parser.add_argument('--links', help='Create links to files in HTML output', action="store_true")
 parser.add_argument('--symlink', help='Follow symlinks. WARN: This can cause infinite loops.', action="store_true")
@@ -138,26 +143,30 @@ def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
         dirs = sorted(dirs, key=str.casefold)
         files = sorted(files, key=str.casefold)
 
-        # The value list in the dictionary are indexed as follows.
+        # The key is the current dir, and the value is described as follows.
+        # A four index array like so:
         # |  0 |      1     |         2           |    3     |
         # | id | file_attrs | dir total file size | sub dirs |
-        # [1] leads with the current directory path and modification time, and 
-        # is followed by the directory's files and their attributes.
+        # [1] is an array with the current directory path and modification time, then 
+        # is followed by the directory's files. Each file has a size and modtime.
         # Id is unused but could be useful for future features.
         dirs_dictionary[current_dir] = [id, [], 0, '']
         arr = dirs_dictionary[current_dir][1]
         dir_mod_time = int(
                 datetime.datetime.fromtimestamp(
                         os.path.getmtime(current_dir)).timestamp())
-        arr.append(f'{current_dir}*0*{dir_mod_time}')
+        arr.append(f'{json.dumps(current_dir)[1:-1]}\0000\0{dir_mod_time}')
 
         ##### Enumerate FILES #####
         total_size = 0
         for file in files:
             full_file_path = os.path.join(current_dir, file)
+            
             if os.path.isfile(full_file_path):
                 total_numFiles   += 1
                 file_size         = os.path.getsize(full_file_path)
+                if (os.path.islink(full_file_path)):
+                    file_size = os.lstat(full_file_path).st_size
                 total_size       += file_size
                 grand_total_size += file_size
                 try:  # Avoid possible invalid mtimes
@@ -166,7 +175,7 @@ def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
                 except:
                     logging.warning(f'----fromtimestamp timestamp invalid [{full_file_path}]')
                     mod_time = 1
-                arr.append(f'{file}*{file_size}*{mod_time}')
+                arr.append(f'{json.dumps(file)[1:-1]}\0{file_size}\0{mod_time}')
         dirs_dictionary[current_dir][2] = total_size
 
         ##### Enumerate DIRS #####
@@ -177,23 +186,20 @@ def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
                     (follow_symlink and os.path.isdir(full_dir_path)):
                 id += 1
                 total_numDirs += 1
-                dirs_dictionary[full_dir_path] = (id, [], '')
-                dir_links += f'{id}*'
+                dirs_dictionary[full_dir_path] = [id, [dir], 0, '']
+                dir_links += f'{id}\0'
         dirs_dictionary[current_dir][3] = dir_links[:-1]
 
     ## Output format follows:
-    #  "FILE_PATH*0*MODIFIED_TIME","FILE_NAME*FILE_SIZE*MODIFIED_TIME",DIR_SIZE,"DIR1*DIR2..."
+    # "FILE_PATH\00\0MODIFIED_TIME","FILE_NAME\0FILE_SIZE\0MODIFIED_TIME",DIR_SIZE,"DIR1\0DIR2..."
+    # To get a practical sense of what this means, look at a generated output after using the program.
     for entry in dirs_dictionary:
         logging.debug(f'entry in dirs_dictionary [{str(entry)}]')
         dir_data = f'D.p(['
-        try:
-            for data in dirs_dictionary[entry][1]:
-                data = data.replace('"', '&quot;') # Quotes in files/dirs can break the html result.
-                dir_data += f'"{data}",'
-            dir_data += f'{dirs_dictionary[entry][2]},"{dirs_dictionary[entry][3]}"])\n'
-            dir_results.append(dir_data)
-        except:
-            logging.error( f'----loading from dirs_dictionary error. Could not add [{entry}]')
+        for data in dirs_dictionary[entry][1]:
+            dir_data += f'"{data}",'
+        dir_data += f'{dirs_dictionary[entry][2]},"{dirs_dictionary[entry][3]}"])\n'
+        dir_results.append(dir_data)
     return
 
 # This function will execute only on the first iteration of the directory walk.
@@ -229,13 +235,12 @@ def generateHTML(
     for line in template_file:
         modified_line = line
         if '[DIR DATA]' in modified_line:
-            # New lines in file names will break the output.
             for line in dir_results:
-                sane_format = line.replace('\r', '')
                 try:  # can error if encoding mismatch; can't fix, just report
-                    output_file.write(f'{sane_format}')
+                      # TODO: investigate if the above is true after v1.6.1
+                    output_file.write(f'{line}')
                 except:
-                    logging.warning(f'----output_file.write error [{sane_format}]')
+                    logging.warning(f'----output_file.write error [{line}]')
             continue
         modified_line = modified_line.replace('[APP NAME]', appName)
         modified_line = modified_line.replace('[APP VER]', app_ver)
