@@ -157,6 +157,9 @@ def generateDirArray(root_dir):  # root i.e. user-provided root path, not "/"
         elif rel_dir == root_str[:-1]:  # If it's the root directory itself
             rel_dir = "/"
 
+        if not rel_dir.startswith("/"):
+            rel_dir = "/" + rel_dir
+
         # The key is the current dir, and the value is described as follows.
         # A four index array like so:
         # |  0 |      1     |         2           |    3     |
@@ -266,7 +269,7 @@ def generateHTML(
         modified_line = modified_line.replace('[TOT SIZE]', str(grand_total_size))
         modified_line = modified_line.replace('[LINK FILES]', file_links)
         modified_line = modified_line.replace('[LINK PROTOCOL]', link_protocol)
-        modified_line = modified_line.replace('[SOURCE ROOT]', '/')
+        modified_line = modified_line.replace('[SOURCE ROOT]', '')
         modified_line = modified_line.replace('[LINK ROOT]', '')
         output_file.write(modified_line)
     template_file.close()

@@ -1309,7 +1309,12 @@
 					let file_tmp = sTmp[0];
 					if( linkFiles )
 					{
-						const url = encodeURI(`${linkProtocol}${dir}/${filename}`);
+						let url;
+						if( dir === "/" ) {
+							url = encodeURI(`${linkProtocol}/${filename}`);
+						} else {
+							url = encodeURI(`${linkProtocol}${dir}/${filename}`);
+						}
 						file_tmp = `<a href=${url}>${filename}</a>`;
 					}
 					
