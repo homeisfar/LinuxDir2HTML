@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 version = re.search(
-    r'(app_ver     = "(\d.\d.\d)")',
+    r'(app_ver = "(\d.\d.\d)")',
     open("linuxdir2html/linuxdir2html.py").read(),
     re.M
 ).group(2)
