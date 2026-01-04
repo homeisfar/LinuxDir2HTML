@@ -16,6 +16,7 @@
 # points to a non-file then it probably will not be in the output (e.g. wine drive_c dir).
 # v1.6.1 finally fixes files with new lines and * breaking the output.
 
+import shutil
 import argparse
 import datetime
 import json
@@ -31,6 +32,7 @@ gen_date    = datetime.datetime.now().strftime("%m/%d/%Y")
 gen_time    = datetime.datetime.now().strftime("%H:%M")
 app_link    = "https://github.com/homeisfar/LinuxDir2HTML"
 dir_data    = ""
+free_space      = 0
 total_numFiles  = 0 
 total_numDirs   = 0 
 grand_total_size= 0
@@ -58,7 +60,7 @@ parser.add_argument('--version', help='Print version and exit', action="version"
 def main():
     global include_hidden, file_links, childList_names, startsList_names, follow_symlink
     args = parser.parse_args()
-    
+
     ## Initialize logging facilities
     log_level = logging.WARNING
     if args.verbose:
@@ -71,7 +73,7 @@ def main():
     logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%H:%M:%S', level=log_level)
     log_name = logging.getLevelName(logging.getLogger().getEffectiveLevel())
     logging.info( f'Logging Level {log_name}')
-    
+
     # Handle user input flags and options
     pathToIndex = args.pathToIndex
     title = args.outputfile
@@ -109,25 +111,29 @@ def main():
     # then generate the resulting HTML
     pathToIndex = Path(pathToIndex).resolve()
     logging.warning(f'Root index directory: [{pathToIndex}]')
+
+    # Get the freespace of the disk
+    free_space = shutil.disk_usage(pathToIndex).free
+
     generateDirArray(pathToIndex)
     logging.info('Outputting HTML...')
     generateHTML(
-        dir_data, appName, app_ver, gen_date, gen_time, title, app_link,
+        free_space, dir_data, appName, app_ver, gen_date, gen_time, title, app_link,
         total_numFiles, total_numDirs, grand_total_size, file_links
         )
     return
-        
+
 def generateDirArray(root_dir): # root i.e. user-provided root path, not "/"
     global dir_data, total_numFiles, total_numDirs, grand_total_size, \
             dir_results, childList_names, startsList_names
     id = 0
     dirs_dictionary = {}
-    
+
     # We enumerate every unique directory, ignoring symlinks by default.
     first_iteration = True
     for current_dir, dirs, files in os.walk(root_dir, True, None, follow_symlink):
         logging.debug( f'Walking Dir [{current_dir}]')
-        
+
         # If --child or --startswith are used, only add the requested
         # directories. This will only be performed on the root_dir
         if first_iteration:
@@ -227,7 +233,7 @@ def selectDirs(current_dir, dirs, include_hidden):
     return
 
 def generateHTML(
-    dir_data, appName, app_ver, gen_date, gen_time, title,
+    free_space, dir_data, appName, app_ver, gen_date, gen_time, title,
     app_link, numFiles, numDirs, grand_total_size, file_links
     ):
     template_file = open((Path(__file__).parent / 'template.html'), 'r', encoding="utf-8")
@@ -242,6 +248,7 @@ def generateHTML(
                 except:
                     logging.warning(f'----output_file.write error [{line}]')
             continue
+        modified_line = modified_line.replace('[FREE SPACE]', str(free_space))
         modified_line = modified_line.replace('[APP NAME]', appName)
         modified_line = modified_line.replace('[APP VER]', app_ver)
         modified_line = modified_line.replace('[GEN DATE]', gen_date)

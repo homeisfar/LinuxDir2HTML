@@ -69,7 +69,7 @@
 		/* --- Top header --- */
 
 		.app_header {
-			height:80px;
+			height: 110px;
 			max-width: 1440px;
 			background-color:#eee;
 			margin-left: auto;
@@ -103,6 +103,7 @@
 
 			margin:10px;
 			margin-left:16px;
+			margin-bottom: 50px;
 			float:left;
 			width:48px;
 			height:48px;
@@ -124,6 +125,13 @@
 			top: -1px;
 			cursor: pointer;
 		}
+		
+		.app_header_free_space {
+			padding: 10px;
+			padding-top:0px;
+			font-weight: bold;
+		}
+
 		.app_header_stats {
 			padding: 10px;
 			padding-top:0px;
@@ -819,6 +827,7 @@
 
 			/* ---  Init --- */
 
+			$("#free_space").text( bytesToSize( $("#free_space").text() ) );
 			$("#tot_size").text( bytesToSize( $("#tot_size").text() ) );
 
 			$("#loading").remove();
@@ -1697,6 +1706,7 @@
 			</form>
 
 			<h1>[TITLE]</h1>
+			<div class="app_header_free_space">Free space on disk: <span id="free_space">[FREE SPACE]</span></div>
 			<div class="app_header_stats">[NUM FILES] files in [NUM DIRS] folders (<span id="tot_size">[TOT SIZE]</span>)<br>Generated [GEN DATE] [GEN TIME] by <a href="[APP LINK]">[APP NAME]</a></div>
 
 		</div>
